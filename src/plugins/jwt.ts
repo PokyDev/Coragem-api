@@ -8,7 +8,7 @@ import { config } from '../lib/config';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 export const jwtPlugin = fp(async (app) => {
-  app.register(fjwt, {
+  await app.register(fjwt, {
     secret: config.jwt.secret,
     cookie: {
       cookieName: 'token',
