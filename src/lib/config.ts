@@ -11,14 +11,14 @@ function requireEnv(key: string): string {
 
 export const config = {
   server: {
-    port: Number(process.env.PORT) || 3001,
+    port:    Number(process.env.PORT) || 3001,
     nodeEnv: process.env.NODE_ENV || 'development',
   },
   database: {
     url: requireEnv('DATABASE_URL'),
   },
   jwt: {
-    secret: requireEnv('JWT_SECRET'),
+    secret:    requireEnv('JWT_SECRET'),
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   },
   cloudinary: {
@@ -28,5 +28,14 @@ export const config = {
   },
   cors: {
     allowedOrigin: requireEnv('ALLOWED_ORIGIN'),
+  },
+  google: {
+    clientId:     requireEnv('GOOGLE_CLIENT_ID'),
+    clientSecret: requireEnv('GOOGLE_CLIENT_SECRET'),
+    callbackUrl:  requireEnv('GOOGLE_CALLBACK_URL'),
+  },
+  auth: {
+    adminAllowedEmail: requireEnv('ADMIN_ALLOWED_EMAIL'),
+    frontendUrl:       requireEnv('FRONTEND_URL'),
   },
 } as const;

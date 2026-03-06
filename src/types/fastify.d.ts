@@ -1,12 +1,15 @@
 /**
  * src/types/fastify.d.ts
  *
- * Augmentación del namespace de Fastify para registrar el decorador
- * `authenticate` que agrega el plugin JWT, y el payload del token.
+ * Augmentación del namespace de Fastify para:
+ *   - el decorador `authenticate` del plugin JWT
+ *   - el decorador `googleOAuth2` del plugin OAuth2
+ *   - el payload del JWT
  */
 
 import '@fastify/jwt';
 import 'fastify';
+import type { OAuth2Namespace } from '@fastify/oauth2';
 
 declare module '@fastify/jwt' {
   interface FastifyJWT {
@@ -21,5 +24,7 @@ declare module 'fastify' {
       request: import('fastify').FastifyRequest,
       reply:   import('fastify').FastifyReply
     ) => Promise<void>;
+
+    googleOAuth2: OAuth2Namespace;
   }
 }

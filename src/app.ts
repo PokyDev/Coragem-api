@@ -3,16 +3,16 @@
  *
  * Construye y configura la instancia de Fastify.
  * No llama a listen() — eso es responsabilidad de server.ts.
- * Exportar la app permite testearla sin levantar el puerto.
  */
 
-import Fastify from 'fastify';
+import Fastify    from 'fastify';
 import rateLimit  from '@fastify/rate-limit';
 
-import { corsPlugin      } from './plugins/cors';
-import { jwtPlugin       } from './plugins/jwt';
-import { multipartPlugin } from './plugins/multipart';
-import { cookiePlugin    } from './plugins/cookie';
+import { corsPlugin        } from './plugins/cors';
+import { jwtPlugin         } from './plugins/jwt';
+import { multipartPlugin   } from './plugins/multipart';
+import { cookiePlugin      } from './plugins/cookie';
+import { googleOAuthPlugin } from './plugins/oauth';
 
 import { authRoutes    } from './routes/auth.routes';
 import { productRoutes } from './routes/products.routes';
@@ -28,16 +28,14 @@ export async function buildApp() {
   });
 
   // ── Plugins ──────────────────────────────────────────────────────
+  // El orden importa: cookie debe ir antes que jwt y oauth.
 
   await app.register(corsPlugin);
+  await app.register(cookiePlugin);
   await app.register(jwtPlugin);
   await app.register(multipartPlugin);
-  await app.register(cookiePlugin);
+  await app.register(googleOAuthPlugin);
 
-  /*
-   * Rate limiting — global: false para que solo aplique en las rutas
-   * que lo configuren explícitamente (actualmente: POST /api/pattern/verify).
-   */
   await app.register(rateLimit, { global: false });
 
   // ── Health check ─────────────────────────────────────────────────

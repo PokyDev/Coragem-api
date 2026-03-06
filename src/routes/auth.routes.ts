@@ -1,27 +1,39 @@
 /**
  * src/routes/auth.routes.ts
  *
- * POST /api/auth/login   — login con email + password, devuelve JWT en cookie
- * POST /api/auth/logout  — borra la cookie JWT
- * GET  /api/auth/me      — datos del admin autenticado (protegida)
+ * GET  /api/auth/google           → inicia el flujo OAuth (manejado por el plugin)
+ * GET  /api/auth/google/callback  → callback de Google → JWT cookie → redirect
+ * GET  /api/auth/me               → datos del admin autenticado (protegida)
+ * POST /api/auth/logout           → borra la cookie JWT
  */
 
 import type { FastifyInstance } from 'fastify';
+import {
+  handleGoogleCallback,
+  getMe,
+  postLogout,
+} from '../controllers/auth.controller';
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
 
-  app.post('/login', async (_req, reply) => {
-    reply.code(501).send({ error: 'Not implemented yet' });
+  /**
+   * La ruta GET /api/auth/google la registra automáticamente el plugin
+   * @fastify/oauth2 usando `startRedirectPath`. No hay que declararla aquí.
+   */
+
+  // Callback que Google llama después de que el usuario autoriza
+  app.get('/google/callback', {
+    handler: handleGoogleCallback,
   });
 
-  app.post('/logout', async (_req, reply) => {
-    reply.clearCookie('token', { path: '/' });
-    reply.send({ message: 'Sesión cerrada' });
-  });
-
+  // Datos del admin autenticado
   app.get('/me', {
     preHandler: [app.authenticate],
-  }, async (req, reply) => {
-    reply.send({ user: req.user });
+    handler:    getMe,
+  });
+
+  // Cerrar sesión
+  app.post('/logout', {
+    handler: postLogout,
   });
 }
