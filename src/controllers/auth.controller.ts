@@ -57,7 +57,7 @@ export async function handleGoogleCallback(
       { expiresIn: config.jwt.expiresIn }
     );
 
-    // 6. Setear cookie HttpOnly — el frontend nunca toca el token directamente
+    // 6. Setear cookie HttpOnly — el frontend nunca toca el token JWT directamente
     reply.setCookie('token', jwt, {
       httpOnly: true,
       secure:   config.server.nodeEnv === 'production',
