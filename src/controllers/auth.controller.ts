@@ -105,6 +105,6 @@ export async function postLogout(
   reply:    FastifyReply
 ): Promise<void> {
   reply.clearCookie('token', { path: '/' });
-  reply.clearCookie('oauth2-redirect-state', { path: '/' });
+  reply.clearCookie('oauth2-redirect-state', { path: '/api/auth' });
   reply.send({ message: 'Sesión cerrada' });
 }
