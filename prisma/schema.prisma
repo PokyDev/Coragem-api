@@ -32,7 +32,6 @@ enum Color {
 model Product {
   id          String    @id @default(cuid())
   name        String
-  description String?
   price       Int
   category    Category
   color       Color
