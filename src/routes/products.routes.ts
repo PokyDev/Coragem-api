@@ -2,8 +2,8 @@
  * src/routes/products.routes.ts
  *
  * Públicas:
- *   GET /api/products        — lista productos visibles (?category= ?search=)
- *   GET /api/products/:id    — detalle de producto
+ *   GET /api/products        — lista productos visibles (?category= ?color= ?search=)
+ *   GET /api/products/:id    — detalle de producto visible
  *
  * Admin (JWT requerido):
  *   GET    /api/admin/products              — todos los productos
@@ -17,20 +17,24 @@
  */
 
 import type { FastifyInstance } from 'fastify';
+import { getProducts, getProductById } from '../controllers/product.controller';
+import { getProductsSchema, getProductByIdSchema } from '../schemas/product.schema';
 
 export async function productRoutes(app: FastifyInstance): Promise<void> {
 
-  // ── Públicas ────────────────────────────────────────────────────
+  // ── Públicas ──────────────────────────────────────────────────────
 
-  app.get('/products', async (_req, reply) => {
-    reply.code(501).send({ error: 'Not implemented yet' });
+  app.get('/products', {
+    schema:  getProductsSchema,
+    handler: getProducts,
   });
 
-  app.get('/products/:id', async (_req, reply) => {
-    reply.code(501).send({ error: 'Not implemented yet' });
+  app.get('/products/:id', {
+    schema:  getProductByIdSchema,
+    handler: getProductById,
   });
 
-  // ── Admin ───────────────────────────────────────────────────────
+  // ── Admin (pendientes de implementar) ─────────────────────────────
 
   app.get('/admin/products', {
     preHandler: [app.authenticate],
