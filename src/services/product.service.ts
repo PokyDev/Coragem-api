@@ -1,59 +1,67 @@
 /**
  * src/services/product.service.ts
- *
- * Lógica de negocio de productos.
- * Toda consulta a Prisma vive aquí — los controllers solo orquestan.
  */
 
 import { prisma } from '../lib/prisma';
-import type { Category, Color } from '@prisma/client';
+import type { Category, Color, Prisma } from '@prisma/client';
+
+export type SortKey = 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc' | 'most_sold';
 
 interface GetProductsFilter {
   category?: Category;
   color?:    Color;
   search?:   string;
+  sort?:     SortKey;
+  priceMin?: number;
+  priceMax?: number;
 }
 
-/**
- * Selección de campos de imagen que se incluye en todas las queries.
- * Solo se devuelve lo que el frontend necesita.
- */
 const imageSelect = {
-  id:      true,
-  url:     true,
-  order:   true,
-  width:   true,
-  height:  true,
+  id:     true,
+  url:    true,
+  order:  true,
+  width:  true,
+  height: true,
 } as const;
+
+function buildOrderBy(sort?: SortKey): Prisma.ProductOrderByWithRelationInput {
+  switch (sort) {
+    case 'price_asc':  return { price: 'asc'  };
+    case 'price_desc': return { price: 'desc' };
+    case 'name_asc':   return { name:  'asc'  };
+    case 'name_desc':  return { name:  'desc' };
+    case 'most_sold':
+    default:           return { ventas: 'desc' };
+  }
+}
 
 // ── Rutas públicas ────────────────────────────────────────────────────
 
-/**
- * Lista todos los productos visibles (isVisible = true).
- * Soporta filtros opcionales por categoría, color y búsqueda por nombre.
- * Las imágenes se devuelven ordenadas por `order ASC`.
- */
 export async function getVisibleProducts(filters: GetProductsFilter) {
-  const { category, color, search } = filters;
+  const { category, color, search, sort, priceMin, priceMax } = filters;
 
   return prisma.product.findMany({
     where: {
       isVisible: true,
       ...(category && { category }),
       ...(color    && { color    }),
-      ...(search   && {
-        name: { contains: search, mode: 'insensitive' },
+      ...(search   && { name: { contains: search, mode: 'insensitive' } }),
+      ...((priceMin !== undefined || priceMax !== undefined) && {
+        price: {
+          ...(priceMin !== undefined && { gte: priceMin }),
+          ...(priceMax !== undefined && { lte: priceMax }),
+        },
       }),
     },
-    orderBy: { ventas: 'desc' }, // más vendidos primero
+    orderBy: buildOrderBy(sort),
     select: {
-      id:        true,
-      name:      true,
-      price:     true,
-      category:  true,
-      color:     true,
-      stock:     true,
-      ventas:    true,
+      id:       true,
+      name:     true,
+      price:    true,
+      category: true,
+      color:    true,
+      stock:    true,
+      ventas:   true,
       images: {
         orderBy: { order: 'asc' },
         select:  imageSelect,
@@ -62,10 +70,6 @@ export async function getVisibleProducts(filters: GetProductsFilter) {
   });
 }
 
-/**
- * Devuelve el detalle completo de un producto visible por ID.
- * Retorna null si no existe o no está visible (el controller decide el 404).
- */
 export async function getVisibleProductById(id: string) {
   return prisma.product.findFirst({
     where: { id, isVisible: true },
