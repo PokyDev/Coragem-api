@@ -10,5 +10,6 @@ export const corsPlugin = fp(async (app) => {
   await app.register(cors, {
     origin:      config.cors.allowedOrigin,
     credentials: true,
+    methods:     ['GET', 'POST', 'PATCH', 'DELETE'],
   });
 });
