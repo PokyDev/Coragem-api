@@ -9,21 +9,110 @@
 
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import {
+  createProduct,
   patchProduct,
   ValidationError,
   NotFoundError,
+  type CreateProductInput,
   type PatchProductInput,
 } from '../services/admin-product.service';
-import type { PatchProductFields } from '../schemas/admin-product.schema';
+import type { CreateProductFields, PatchProductFields } from '../schemas/admin-product.schema';
 
 interface PatchProductParams {
   id: string;
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────
+
 /**
- * PATCH /api/admin/products/:id
+ * Parsea un request multipart y devuelve los campos de texto
+ * y el archivo de imagen (si existe).
+ * Reutilizado por POST y PATCH para no duplicar la iteración de parts().
+ */
+async function parseMultipart(request: FastifyRequest): Promise<{
+  fields:        Record<string, string>;
+  imageBuffer?:  Buffer;
+  imageMimeType?: string;
+}> {
+  const fields: Record<string, string> = {};
+  let imageBuffer:   Buffer | undefined;
+  let imageMimeType: string | undefined;
+
+  for await (const part of request.parts()) {
+    if (part.type === 'file') {
+      if (part.fieldname === 'image') {
+        imageBuffer   = await part.toBuffer();
+        imageMimeType = part.mimetype;
+      } else {
+        // Consumir el stream para evitar memory leaks
+        await part.toBuffer();
+      }
+    } else {
+      fields[part.fieldname] = part.value as string;
+    }
+  }
+
+  return { fields, imageBuffer, imageMimeType };
+}
+
+// ── POST /api/admin/products ──────────────────────────────────────────
+
+/**
+ * Crea un producto nuevo.
  *
- * Body: multipart/form-data
+ * Body: multipart/form-data — todos los campos son requeridos.
+ *   - name      (string)
+ *   - price     (string → number)
+ *   - stock     (string → number)
+ *   - ventas    (string → number)
+ *   - category  (string)
+ *   - color     (string)
+ *   - image     (file) — obligatorio
+ */
+export async function postProductHandler(
+  request: FastifyRequest,
+  reply:   FastifyReply,
+): Promise<void> {
+  const { fields, imageBuffer, imageMimeType } = await parseMultipart(request);
+
+  if (!imageBuffer || !imageMimeType) {
+    reply.code(400).send({ error: 'La imagen es requerida' });
+    return;
+  }
+
+  const createFields: CreateProductFields = {
+    name:     fields.name     ?? '',
+    price:    Number(fields.price),
+    stock:    Number(fields.stock),
+    ventas:   Number(fields.ventas  ?? '0'),
+    category: fields.category ?? '',
+    color:    fields.color    ?? '',
+  };
+
+  const input: CreateProductInput = {
+    fields:        createFields,
+    imageBuffer,
+    imageMimeType,
+  };
+
+  try {
+    const product = await createProduct(input);
+    reply.code(201).send({ product });
+  } catch (err) {
+    if (err instanceof ValidationError) {
+      reply.code(400).send({ error: err.message });
+      return;
+    }
+    throw err;
+  }
+}
+
+// ── PATCH /api/admin/products/:id ────────────────────────────────────
+
+/**
+ * Aplica una actualización parcial sobre un producto existente.
+ *
+ * Body: multipart/form-data — todos los campos son opcionales.
  *   - name?     (string)
  *   - price?    (string → number)
  *   - stock?    (string → number)
@@ -31,56 +120,31 @@ interface PatchProductParams {
  *   - category? (string)
  *   - color?    (string)
  *   - image?    (file) — opcional, reemplaza la imagen actual
- *
- * Multipart llega como stream. Usamos @fastify/multipart con
- * request.parts() para iterar campos y archivos en un solo paso.
  */
 export async function patchProductHandler(
   request: FastifyRequest<{ Params: PatchProductParams }>,
   reply:   FastifyReply,
 ): Promise<void> {
   const { id } = request.params;
+  const { fields, imageBuffer, imageMimeType } = await parseMultipart(request);
 
-  // ── Parsear multipart ────────────────────────────────────────────
-  const fields: PatchProductFields = {};
-  let   imageBuffer:   Buffer | undefined;
-  let   imageMimeType: string | undefined;
+  const patchFields: PatchProductFields = {};
 
-  for await (const part of request.parts()) {
-    if (part.type === 'file') {
-      // Solo procesamos el campo "image"; ignoramos otros archivos
-      if (part.fieldname === 'image') {
-        imageBuffer   = await part.toBuffer();
-        imageMimeType = part.mimetype;
-      } else {
-        // Consumir el stream para evitar memory leaks aunque no lo usemos
-        await part.toBuffer();
-      }
-    } else {
-      // Campo de texto — lo mapeamos al tipo PatchProductFields
-      const value = part.value as string;
+  if (fields.name     !== undefined) patchFields.name     = fields.name;
+  if (fields.price    !== undefined) patchFields.price    = Number(fields.price);
+  if (fields.stock    !== undefined) patchFields.stock    = Number(fields.stock);
+  if (fields.ventas   !== undefined) patchFields.ventas   = Number(fields.ventas);
+  if (fields.category !== undefined) patchFields.category = fields.category;
+  if (fields.color    !== undefined) patchFields.color    = fields.color;
 
-      switch (part.fieldname) {
-        case 'name':     fields.name     = value; break;
-        case 'price':    fields.price    = Number(value); break;
-        case 'stock':    fields.stock    = Number(value); break;
-        case 'ventas':   fields.ventas   = Number(value); break;
-        case 'category': fields.category = value; break;
-        case 'color':    fields.color    = value; break;
-        // Ignorar campos desconocidos
-      }
-    }
-  }
-
-  // ── Delegar al service ───────────────────────────────────────────
-  const patchInput: PatchProductInput = {
-    fields,
+  const input: PatchProductInput = {
+    fields: patchFields,
     ...(imageBuffer   && { imageBuffer   }),
     ...(imageMimeType && { imageMimeType }),
   };
 
   try {
-    const product = await patchProduct(id, patchInput);
+    const product = await patchProduct(id, input);
     reply.send({ product });
   } catch (err) {
     if (err instanceof NotFoundError) {
@@ -91,7 +155,6 @@ export async function patchProductHandler(
       reply.code(400).send({ error: err.message });
       return;
     }
-    // Error inesperado — Fastify lo captura y devuelve 500
     throw err;
   }
 }

@@ -5,22 +5,58 @@
  * de productos. Separados del schema público para no mezclar
  * responsabilidades (el schema público solo valida querystrings de lectura).
  *
- * PATCH /api/admin/products/:id  — todos los campos son opcionales (actualización parcial)
+ * POST  /api/admin/products       — todos los campos son requeridos
+ * PATCH /api/admin/products/:id   — todos los campos son opcionales (actualización parcial)
  */
 
 import type { FastifySchema } from 'fastify';
 
-const CATEGORIES = ['EARCUFF', 'ANILLO', 'DIJE', 'CADENA', 'TOPOS', 'CANDONGAS', 'CONJUNTOS'];
-const COLORS     = ['ROJO', 'NEGRO', 'BLANCO', 'ROSADO', 'SILVER'];
+export const VALID_CATEGORIES = [
+  'EARCUFF',
+  'ANILLO',
+  'DIJE',
+  'CADENA',
+  'TOPOS',
+  'CANDONGAS',
+  'CONJUNTOS',
+] as const;
+
+export const VALID_COLORS = [
+  'ROJO',
+  'NEGRO',
+  'BLANCO',
+  'ROSADO',
+  'SILVER',
+] as const;
+
+// ── POST /api/admin/products ──────────────────────────────────────────
 
 /**
- * PATCH /api/admin/products/:id
- *
- * El body llega como multipart/form-data porque puede incluir una imagen.
+ * El body llega como multipart/form-data porque incluye una imagen obligatoria.
  * Fastify no valida multipart vía JSON Schema — la validación de campos
- * de texto se hace manualmente en el service (ver admin-product.service.ts).
- *
- * Solo validamos los params aquí.
+ * se hace manualmente en el service.
+ * Solo validamos que no haya params inesperados a nivel de ruta.
+ */
+export const postProductSchema: FastifySchema = {};
+
+/**
+ * Campos requeridos para crear un producto.
+ * La imagen se recibe como archivo multipart (no se tipifica aquí).
+ */
+export interface CreateProductFields {
+  name:     string;
+  price:    number;
+  stock:    number;
+  ventas:   number;
+  category: string;
+  color:    string;
+}
+
+// ── PATCH /api/admin/products/:id ────────────────────────────────────
+
+/**
+ * Solo validamos los params aquí. El body multipart se valida
+ * manualmente en el service.
  */
 export const patchProductSchema: FastifySchema = {
   params: {
@@ -31,14 +67,6 @@ export const patchProductSchema: FastifySchema = {
     },
   },
 };
-
-/**
- * Validación manual del body multipart.
- * Exportamos los valores válidos para que el service pueda verificarlos
- * sin duplicar las listas.
- */
-export const VALID_CATEGORIES = CATEGORIES;
-export const VALID_COLORS     = COLORS;
 
 /**
  * Campos que el administrador puede modificar en un producto.
