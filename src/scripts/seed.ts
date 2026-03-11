@@ -15,32 +15,28 @@
  */
 
 import path from 'path';
-import { v2 as cloudinary } from 'cloudinary';
+import fs   from 'fs';
 import { PrismaClient, Category, Color } from '@prisma/client';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-// ── Clientes ─────────────────────────────────────────────────────────
+import { uploadImageBuffer } from '../lib/cloudinary';
+
+// ── Clientes ──────────────────────────────────────────────────────────
 
 const prisma = new PrismaClient();
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
-  api_key:    process.env.CLOUDINARY_API_KEY!,
-  api_secret: process.env.CLOUDINARY_API_SECRET!,
-});
 
 // ── Tipos ─────────────────────────────────────────────────────────────
 
 interface SeedProduct {
-  name:       string;
-  price:      number;
-  category:   Category;
-  color:      Color;
-  stock:      number;
-  ventas:     number;
-  imageFile:  string; // nombre del archivo en /seed-images/
+  name:      string;
+  price:     number;
+  category:  Category;
+  color:     Color;
+  stock:     number;
+  ventas:    number;
+  imageFile: string; // nombre del archivo en /seed-images/
 }
 
 // ── Productos — espejo exacto de src/data/products.json ──────────────
@@ -122,32 +118,21 @@ const PRODUCTS: SeedProduct[] = [
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
-const IMAGES_DIR = path.resolve(__dirname, 'seed-images');
+const IMAGES_DIR      = path.resolve(__dirname, 'seed-images');
+const CLOUDINARY_FOLDER = 'coragem/seed';
 
 /**
- * Sube un archivo local a Cloudinary.
- * Carpeta destino: coragem/seed/
- * El public_id queda como "coragem/seed/producto_1", etc.
+ * Lee un archivo local y lo sube a Cloudinary usando el helper centralizado.
+ * El public_id se deriva del nombre del archivo sin extensión (ej. "producto_1").
  */
 async function uploadLocalImage(
   filename: string,
 ): Promise<{ url: string; publicId: string; width: number; height: number }> {
   const filePath = path.join(IMAGES_DIR, filename);
+  const buffer   = fs.readFileSync(filePath);
   const publicId = path.parse(filename).name; // "producto_1"
 
-  const result = await cloudinary.uploader.upload(filePath, {
-    folder:        'coragem/seed',
-    public_id:     publicId,
-    overwrite:     true,
-    resource_type: 'image',
-  });
-
-  return {
-    url:      result.secure_url,
-    publicId: result.public_id,
-    width:    result.width,
-    height:   result.height,
-  };
+  return uploadImageBuffer(buffer, CLOUDINARY_FOLDER, publicId);
 }
 
 // ── Runner principal ──────────────────────────────────────────────────

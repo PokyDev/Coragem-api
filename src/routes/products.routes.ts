@@ -6,19 +6,21 @@
  *   GET /api/products/:id    — detalle de producto visible
  *
  * Admin (JWT requerido):
- *   GET    /api/admin/products              — todos los productos
- *   POST   /api/admin/products              — crear producto
- *   PUT    /api/admin/products/:id          — actualizar producto
- *   PATCH  /api/admin/products/:id/stock    — actualizar stock
- *   DELETE /api/admin/products/:id          — eliminar producto
- *   POST   /api/admin/products/:id/images   — subir imágenes
+ *   GET    /api/admin/products              — todos los productos       [pendiente]
+ *   POST   /api/admin/products              — crear producto            [pendiente]
+ *   PATCH  /api/admin/products/:id          — actualizar producto       ✓ implementado
+ *   PATCH  /api/admin/products/:id/stock    — actualizar solo stock     [pendiente]
+ *   DELETE /api/admin/products/:id          — eliminar producto         [pendiente]
+ *   POST   /api/admin/products/:id/images   — subir imágenes            [pendiente]
  *   PATCH  /api/admin/products/:id/images/reorder
- *   DELETE /api/admin/images/:imageId       — eliminar imagen
+ *   DELETE /api/admin/images/:imageId       — eliminar imagen           [pendiente]
  */
 
 import type { FastifyInstance } from 'fastify';
-import { getProducts, getProductById } from '../controllers/product.controller';
+import { getProducts, getProductById }   from '../controllers/product.controller';
+import { patchProductHandler }           from '../controllers/admin-product.controller';
 import { getProductsSchema, getProductByIdSchema } from '../schemas/product.schema';
+import { patchProductSchema }            from '../schemas/admin-product.schema';
 
 export async function productRoutes(app: FastifyInstance): Promise<void> {
 
@@ -34,7 +36,7 @@ export async function productRoutes(app: FastifyInstance): Promise<void> {
     handler: getProductById,
   });
 
-  // ── Admin (pendientes de implementar) ─────────────────────────────
+  // ── Admin ─────────────────────────────────────────────────────────
 
   app.get('/admin/products', {
     preHandler: [app.authenticate],
@@ -48,10 +50,17 @@ export async function productRoutes(app: FastifyInstance): Promise<void> {
     reply.code(501).send({ error: 'Not implemented yet' });
   });
 
-  app.put('/admin/products/:id', {
+  /**
+   * PATCH /api/admin/products/:id
+   *
+   * Body: multipart/form-data — campos opcionales + imagen opcional.
+   * contentTypeParser no se configura aquí porque @fastify/multipart
+   * ya está registrado globalmente en app.ts.
+   */
+  app.patch('/admin/products/:id', {
+    schema:     patchProductSchema,
     preHandler: [app.authenticate],
-  }, async (_req, reply) => {
-    reply.code(501).send({ error: 'Not implemented yet' });
+    handler:    patchProductHandler,
   });
 
   app.patch('/admin/products/:id/stock', {
