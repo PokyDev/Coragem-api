@@ -43,12 +43,13 @@ export async function getGoogleUserInfo(
 
 /**
  * Verifica que el correo del usuario esté en la whitelist.
- * Solo se permite el correo definido en ADMIN_ALLOWED_EMAIL.
- * Lanza un error tipado que el controller convierte en 403.
+ * Lanza un error tipado que el controller convierte en redirección con ?error=unauthorized.
  */
 export function assertEmailAllowed(email: string): void {
-  const allowed = config.auth.adminAllowedEmail.toLowerCase().trim();
-  if (email.toLowerCase().trim() !== allowed) {
+  const normalized = email.toLowerCase().trim();
+  const allowed = config.auth.adminAllowedEmails;
+
+  if (!allowed.includes(normalized)) {
     throw new Error('EMAIL_NOT_ALLOWED');
   }
 }

@@ -9,6 +9,25 @@ function requireEnv(key: string): string {
   return value;
 }
 
+/**
+ * Parsea variable de entorno con lista de correos.
+ * Normaliza cada entrada: trim + lowercase.
+ * Muestra si la variable no esta definida o resulta vacia tras parsear.
+ */
+function requireEmailList(key: string): string[] {
+  const raw = requireEnv(key);
+  const emails = raw
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (emails.length === 0) {
+    throw new Error(`Environment variable ${key} must contain at least one valid email address.`);
+  }
+
+  return emails;
+}
+
 export const config = {
   server: {
     port:    Number(process.env.PORT) || 3001,
@@ -35,7 +54,7 @@ export const config = {
     callbackUrl:  requireEnv('GOOGLE_CALLBACK_URL'),
   },
   auth: {
-    adminAllowedEmail: requireEnv('ADMIN_ALLOWED_EMAIL'),
+    adminAllowedEmails: requireEmailList('ADMIN_ALLOWED_EMAILS'),
     frontendUrl:       requireEnv('FRONTEND_URL'),
   },
 } as const;
