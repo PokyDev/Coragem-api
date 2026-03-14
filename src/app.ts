@@ -5,6 +5,8 @@
  * No llama a listen() — eso es responsabilidad de server.ts.
  */
 
+// Commit de prueba para el workflow de GitHub Actions con AWS.
+
 import Fastify    from 'fastify';
 import rateLimit  from '@fastify/rate-limit';
 
