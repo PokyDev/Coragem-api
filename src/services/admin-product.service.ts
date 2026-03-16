@@ -23,7 +23,7 @@ import {
 
 // ── Constantes ────────────────────────────────────────────────────────
 
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heif', 'image/heic'];
 const PRODUCTS_FOLDER    = 'coragem/products';
 
 // ── Tipos públicos ────────────────────────────────────────────────────
