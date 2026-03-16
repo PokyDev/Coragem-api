@@ -18,7 +18,7 @@
 
 import type { FastifyInstance } from 'fastify';
 import { getProducts, getProductById }          from '../controllers/product.controller';
-import { postProductHandler, patchProductHandler } from '../controllers/admin-product.controller';
+import { postProductHandler, patchProductHandler, deleteProductHandler } from '../controllers/admin-product.controller';
 import { getProductsSchema, getProductByIdSchema } from '../schemas/product.schema';
 import { postProductSchema, patchProductSchema }   from '../schemas/admin-product.schema';
 
@@ -74,8 +74,7 @@ export async function productRoutes(app: FastifyInstance): Promise<void> {
 
   app.delete('/admin/products/:id', {
     preHandler: [app.authenticate],
-  }, async (_req, reply) => {
-    reply.code(501).send({ error: 'Not implemented yet' });
+    handler:    deleteProductHandler,
   });
 
   app.post('/admin/products/:id/images', {

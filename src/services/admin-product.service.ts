@@ -385,3 +385,37 @@ export async function patchProduct(
 
   return updated;
 }
+
+// ── Service: eliminar producto ────────────────────────────────────────
+
+/**
+ * Elimina un producto y limpia sus imágenes de Cloudinary.
+ *
+ * Flujo:
+ *   1. Verifica que el producto exista y obtiene los publicIds de sus imágenes
+ *   2. Elimina el producto de la BD (cascade elimina los registros Image)
+ *   3. Limpia las imágenes de Cloudinary fuera de la transacción (fire-and-forget)
+ */
+export async function deleteProduct(productId: string): Promise<void> {
+  const existing = await prisma.product.findUnique({
+    where:  { id: productId },
+    select: {
+      images: {
+        select: { publicId: true },
+      },
+    },
+  });
+
+  if (!existing) {
+    throw new NotFoundError('Producto no encontrado');
+  }
+
+  await prisma.product.delete({ where: { id: productId } });
+
+  // Limpiar imágenes de Cloudinary fuera de la transacción — fire-and-forget
+  for (const image of existing.images) {
+    deleteCloudinaryImage(image.publicId).catch((err) => {
+      console.error(`[cloudinary] No se pudo eliminar ${image.publicId}:`, err);
+    });
+  }
+}

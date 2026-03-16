@@ -11,6 +11,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import {
   createProduct,
   patchProduct,
+  deleteProduct,
   ValidationError,
   NotFoundError,
   type CreateProductInput,
@@ -153,6 +154,30 @@ export async function patchProductHandler(
     }
     if (err instanceof ValidationError) {
       reply.code(400).send({ error: err.message });
+      return;
+    }
+    throw err;
+  }
+}
+
+// ── DELETE /api/admin/products/:id ───────────────────────────────────
+
+/**
+ * Elimina un producto y sus imágenes asociadas.
+ * La confirmación previa al DELETE es responsabilidad del frontend (SweetAlert2).
+ */
+export async function deleteProductHandler(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply:   FastifyReply,
+): Promise<void> {
+  const { id } = request.params;
+
+  try {
+    await deleteProduct(id);
+    reply.code(204).send();
+  } catch (err) {
+    if (err instanceof NotFoundError) {
+      reply.code(404).send({ error: err.message });
       return;
     }
     throw err;
