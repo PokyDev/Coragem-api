@@ -8,6 +8,7 @@ import type { SortKey } from '../services/product.service';
 import {
   getVisibleProducts,
   getVisibleProductById,
+  getAllProducts,
 } from '../services/product.service';
 
 interface GetProductsQuery {
@@ -45,4 +46,12 @@ export async function getProductById(
   }
 
   reply.send({ product });
+}
+
+export async function getAdminProducts(
+  _request: FastifyRequest,
+  reply:    FastifyReply
+): Promise<void> {
+  const products = await getAllProducts();
+  reply.send({ products });
 }

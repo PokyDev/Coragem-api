@@ -89,3 +89,30 @@ export async function getVisibleProductById(id: string) {
     },
   });
 }
+
+// ── Rutas admin ───────────────────────────────────────────────────────
+
+/**
+ * Devuelve todos los productos sin filtro de visibilidad.
+ * Incluye isVisible en el select para que el admin pueda
+ * distinguir cuáles están ocultos por stock = 0.
+ */
+export async function getAllProducts() {
+  return prisma.product.findMany({
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id:        true,
+      name:      true,
+      price:     true,
+      category:  true,
+      color:     true,
+      stock:     true,
+      ventas:    true,
+      isVisible: true,
+      images: {
+        orderBy: { order: 'asc' },
+        select:  imageSelect,
+      },
+    },
+  });
+}
