@@ -9,6 +9,13 @@
  *   - Validar y aplicar actualizaciones parciales (PATCH)
  *   - Gestionar imágenes en Cloudinary (subida y eliminación)
  *   - Computar isVisible automáticamente cuando stock cambia a 0
+ *
+ * Nota sobre MIME type vacío:
+ *   Windows y Linux no tienen image/heif registrado nativamente, por lo que
+ *   el browser envía el campo Content-Type vacío en el multipart cuando el
+ *   archivo es .heif/.heic. Se permite pasar la validación en ese caso —
+ *   Cloudinary detecta el formato real por los magic bytes del buffer y
+ *   actúa como segunda línea de defensa rechazando cualquier archivo inválido.
  */
 
 import type { Category, Color } from '@prisma/client';
@@ -23,8 +30,16 @@ import {
 
 // ── Constantes ────────────────────────────────────────────────────────
 
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heif', 'image/heic'];
-const PRODUCTS_FOLDER    = 'coragem/products';
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/heif',
+  'image/heic',
+];
+
+const PRODUCTS_FOLDER = 'coragem/products';
 
 // ── Tipos públicos ────────────────────────────────────────────────────
 
@@ -77,11 +92,6 @@ export class NotFoundError extends Error {
 
 // ── Helpers de validación ─────────────────────────────────────────────
 
-/**
- * Valida y convierte los campos de texto de un multipart.
- * Acepta un modo "strict" para POST (todos requeridos) y
- * "partial" para PATCH (al menos uno presente).
- */
 function validateName(name: string): string {
   const trimmed = name.trim();
   if (trimmed.length === 0) throw new ValidationError('El nombre no puede estar vacío');
@@ -127,18 +137,28 @@ function validateColor(raw: string): Color {
   return raw as Color;
 }
 
+/**
+ * Valida el MIME type del archivo de imagen.
+ *
+ * Se permite string vacío porque Windows y Linux no tienen image/heif
+ * registrado nativamente — el browser envía Content-Type vacío para
+ * archivos .heif/.heic en esos sistemas. Cloudinary detecta el formato
+ * real por el contenido del buffer y rechaza cualquier archivo inválido,
+ * actuando como segunda línea de defensa.
+ *
+ * Mejora futura: inspeccionar los magic bytes del buffer para identificar
+ * el formato real independientemente del MIME type declarado.
+ */
 function validateMimeType(mimeType: string): void {
+  if (!mimeType || mimeType === '') return;
+
   if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
     throw new ValidationError(
-      `Tipo de imagen no permitido: ${mimeType}. Usa JPEG, PNG, WebP o GIF.`
+      `Tipo de imagen no permitido: ${mimeType}. Usa JPEG, PNG, WebP, HEIF o GIF.`
     );
   }
 }
 
-/**
- * Valida los campos requeridos para crear un producto.
- * Lanza ValidationError si falta algún campo o tiene valor inválido.
- */
 function validateCreateFields(raw: CreateProductFields): {
   name:      string;
   price:     number;
@@ -148,12 +168,12 @@ function validateCreateFields(raw: CreateProductFields): {
   color:     Color;
   isVisible: boolean;
 } {
-  if (!raw.name)           throw new ValidationError('El campo "name" es requerido');
+  if (!raw.name)             throw new ValidationError('El campo "name" es requerido');
   if (raw.price     == null) throw new ValidationError('El campo "price" es requerido');
   if (raw.stock     == null) throw new ValidationError('El campo "stock" es requerido');
   if (raw.ventas    == null) throw new ValidationError('El campo "ventas" es requerido');
-  if (!raw.category)       throw new ValidationError('El campo "category" es requerido');
-  if (!raw.color)          throw new ValidationError('El campo "color" es requerido');
+  if (!raw.category)         throw new ValidationError('El campo "category" es requerido');
+  if (!raw.color)            throw new ValidationError('El campo "color" es requerido');
 
   const stock = validateStock(raw.stock);
 
@@ -168,10 +188,6 @@ function validateCreateFields(raw: CreateProductFields): {
   };
 }
 
-/**
- * Valida los campos opcionales para actualizar un producto.
- * Lanza ValidationError si algún campo presente tiene valor inválido.
- */
 function validatePatchFields(raw: PatchProductFields): Partial<{
   name:      string;
   price:     number;
@@ -192,7 +208,7 @@ function validatePatchFields(raw: PatchProductFields): Partial<{
   if (raw.stock !== undefined) {
     const stock      = validateStock(raw.stock);
     update.stock     = stock;
-    update.isVisible = stock > 0; // regla de negocio: stock 0 → oculto
+    update.isVisible = stock > 0;
   }
 
   return update;
@@ -214,7 +230,7 @@ export async function createProduct(
   // 1. Validar campos de texto
   const validated = validateCreateFields(input.fields);
 
-  // 2. Validar y subir imagen (obligatoria en POST)
+  // 2. Validar MIME type y subir imagen (obligatoria en POST)
   validateMimeType(input.imageMimeType);
   const uploaded = await uploadImageBuffer(input.imageBuffer, PRODUCTS_FOLDER);
 
@@ -305,9 +321,11 @@ export async function patchProduct(
   let uploadedImage: Awaited<ReturnType<typeof uploadImageBuffer>> | null = null;
 
   if (input.imageBuffer) {
-    if (input.imageMimeType && !ALLOWED_MIME_TYPES.includes(input.imageMimeType)) {
+    // Permitir MIME type vacío — ocurre con .heif en Windows/Linux.
+    // Cloudinary rechaza buffers inválidos por su cuenta.
+    if (input.imageMimeType && input.imageMimeType !== '' && !ALLOWED_MIME_TYPES.includes(input.imageMimeType)) {
       throw new ValidationError(
-        `Tipo de imagen no permitido: ${input.imageMimeType}. Usa JPEG, PNG, WebP o GIF.`
+        `Tipo de imagen no permitido: ${input.imageMimeType}. Usa JPEG, PNG, WebP, HEIF o GIF.`
       );
     }
     uploadedImage = await uploadImageBuffer(input.imageBuffer, PRODUCTS_FOLDER);
@@ -412,7 +430,6 @@ export async function deleteProduct(productId: string): Promise<void> {
 
   await prisma.product.delete({ where: { id: productId } });
 
-  // Limpiar imágenes de Cloudinary fuera de la transacción — fire-and-forget
   for (const image of existing.images) {
     deleteCloudinaryImage(image.publicId).catch((err) => {
       console.error(`[cloudinary] No se pudo eliminar ${image.publicId}:`, err);
