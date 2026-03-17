@@ -76,7 +76,7 @@ export async function postProductHandler(
 ): Promise<void> {
   const { fields, imageBuffer, imageMimeType } = await parseMultipart(request);
 
-  if (!imageBuffer || !imageMimeType) {
+  if (!imageBuffer) { // Solo validadar el buffer, se recibe MimeType vacio por ahora
     reply.code(400).send({ error: 'La imagen es requerida' });
     return;
   }
@@ -93,7 +93,7 @@ export async function postProductHandler(
   const input: CreateProductInput = {
     fields:        createFields,
     imageBuffer,
-    imageMimeType,
+    imageMimeType: imageMimeType || 'application/octet-stream',
   };
 
   try {

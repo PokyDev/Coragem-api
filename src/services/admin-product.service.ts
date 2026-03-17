@@ -150,7 +150,7 @@ function validateColor(raw: string): Color {
  * el formato real independientemente del MIME type declarado.
  */
 function validateMimeType(mimeType: string): void {
-  if (!mimeType || mimeType === '') return;
+  if (!mimeType || mimeType === '' || mimeType === 'application/octet-stream') return;
 
   if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
     throw new ValidationError(
