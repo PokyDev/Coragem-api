@@ -17,6 +17,7 @@ import { googleOAuthPlugin } from './plugins/oauth';
 import { authRoutes    } from './routes/auth.routes';
 import { productRoutes } from './routes/products.routes';
 import { patternRoutes } from './routes/pattern.routes';
+import { movementRoutes } from './routes/movement.routes';
 
 import { config } from './lib/config';
 
@@ -50,6 +51,7 @@ export async function buildApp() {
   await app.register(authRoutes,    { prefix: '/api/auth'    });
   await app.register(productRoutes, { prefix: '/api'         });
   await app.register(patternRoutes, { prefix: '/api/pattern' });
+  await app.register(movementRoutes, { prefix: '/api/admin' });
 
   return app;
 }

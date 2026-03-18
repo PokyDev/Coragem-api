@@ -27,6 +27,11 @@ enum Color {
   SILVER
 }
 
+enum MovementType {
+  PURCHASE // Entrada de stock
+  SALE     // Salida de stock
+}
+
 // ── Modelos ───────────────────────────────────────
 
 model Product {
@@ -39,12 +44,28 @@ model Product {
   ventas      Int       @default(0)
   isVisible   Boolean   @default(true)
   images      Image[]
+  movements   ProductMovement[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   @@index([category])
   @@index([color])
   @@index([isVisible])
+}
+
+model ProductMovement {
+  id          String        @id @default(cuid())
+  productId   String
+  product     Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type        MovementType
+  quantity    Int
+  stockBefore Int
+  stockAfter  Int
+  createdAt   DateTime      @default(now())
+
+  @@index([productId])
+  @@index([type])
+  @@index([createdAt])
 }
 
 model Image {

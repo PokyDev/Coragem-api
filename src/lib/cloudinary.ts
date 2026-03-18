@@ -35,6 +35,10 @@ export async function uploadImageBuffer(
     const options = {
       folder,
       resource_type: 'image' as const,
+      // - Forzar Conversión automatica al subir -
+      transformation: [
+        { fetch_format: 'auto', quality: 'auto:good' },
+      ],
       ...(publicId && { public_id: publicId, overwrite: true }),
     };
 
