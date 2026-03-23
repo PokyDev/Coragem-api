@@ -1,4 +1,5 @@
 /**
+ * 
  * src/services/pattern.service.ts
  *
  * Lógica de negocio del patrón de desbloqueo.
