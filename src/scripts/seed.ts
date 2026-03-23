@@ -36,10 +36,10 @@ interface SeedProduct {
   color:     Color;
   stock:     number;
   ventas:    number;
-  imageFile: string; // nombre del archivo en /seed-images/
+  imageFile: string;
 }
 
-// ── Productos — espejo exacto de src/data/products.json ──────────────
+// ── Productos reales del catálogo ─────────────────────────────────────
 
 const PRODUCTS: SeedProduct[] = [
   {
@@ -118,19 +118,15 @@ const PRODUCTS: SeedProduct[] = [
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
-const IMAGES_DIR      = path.resolve(__dirname, 'seed-images');
-const CLOUDINARY_FOLDER = 'coragem/seed';
+const IMAGES_DIR        = path.resolve(__dirname, 'seed-images');
+const CLOUDINARY_FOLDER = 'coragem/products';
 
-/**
- * Lee un archivo local y lo sube a Cloudinary usando el helper centralizado.
- * El public_id se deriva del nombre del archivo sin extensión (ej. "producto_1").
- */
 async function uploadLocalImage(
   filename: string,
 ): Promise<{ url: string; publicId: string; width: number; height: number }> {
   const filePath = path.join(IMAGES_DIR, filename);
   const buffer   = fs.readFileSync(filePath);
-  const publicId = path.parse(filename).name; // "producto_1"
+  const publicId = path.parse(filename).name;
 
   return uploadImageBuffer(buffer, CLOUDINARY_FOLDER, publicId);
 }
@@ -149,15 +145,12 @@ async function main() {
 
     console.log(`📦 Creando: ${productFields.name}`);
 
-    // 1. Subir imagen a Cloudinary
     process.stdout.write(`   ↑ Subiendo ${imageFile}...`);
     const uploaded = await uploadLocalImage(imageFile);
     process.stdout.write(' ✓\n');
 
-    // 2. isVisible se deriva del stock
     const isVisible = productFields.stock > 0;
 
-    // 3. Insertar producto + imagen en una sola operación
     const created = await prisma.product.create({
       data: {
         ...productFields,

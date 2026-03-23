@@ -1,3 +1,7 @@
+/**
+ * src/modules/movements/movements.controller.ts
+ */
+
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { MovementType } from '@prisma/client';
 import {
@@ -6,7 +10,7 @@ import {
   getMovementById,
   MovementValidationError,
   MovementNotFoundError,
-} from '../services/movement.service';
+} from './movements.service';
 
 interface CreateMovementParams { productId: string }
 interface CreateMovementBody   { type: MovementType; quantity: number }
@@ -40,8 +44,7 @@ export async function getMovementsHandler(
   request: FastifyRequest<{ Querystring: GetMovementsQuery }>,
   reply:   FastifyReply,
 ): Promise<void> {
-  const { type, limit } = request.query;
-  const movements = await getMovements({ type, limit });
+  const movements = await getMovements(request.query);
   reply.send({ movements });
 }
 
@@ -49,10 +52,8 @@ export async function getMovementByIdHandler(
   request: FastifyRequest<{ Params: GetMovementByIdParams }>,
   reply:   FastifyReply,
 ): Promise<void> {
-  const { id } = request.params;
-
   try {
-    const movement = await getMovementById(id);
+    const movement = await getMovementById(request.params.id);
     reply.send({ movement });
   } catch (err) {
     if (err instanceof MovementNotFoundError) {

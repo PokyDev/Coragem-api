@@ -1,5 +1,9 @@
+/**
+ * src/modules/movements/movements.service.ts
+ */
+
 import type { MovementType } from '@prisma/client';
-import { prisma } from '../lib/prisma';
+import { prisma } from '../../lib/prisma';
 
 export class MovementValidationError extends Error {
   constructor(message: string) {
@@ -45,10 +49,9 @@ export async function createMovement(
       throw new MovementNotFoundError('Producto no encontrado');
     }
 
-    // Validar que una venta no deje el stock en negativo
     if (type === 'SALE' && quantity > product.stock) {
       throw new MovementValidationError(
-        `Stock insuficiente. Disponible: ${product.stock}, solicitado: ${quantity}`
+        `Stock insuficiente. Disponible: ${product.stock}, solicitado: ${quantity}`,
       );
     }
 
@@ -57,23 +60,13 @@ export async function createMovement(
       ? stockBefore + quantity
       : stockBefore - quantity;
 
-    const isVisible = stockAfter > 0;
-
-    // Actualizar stock + visibilidad del producto
     await tx.product.update({
       where: { id: productId },
-      data:  { stock: stockAfter, isVisible },
+      data:  { stock: stockAfter, isVisible: stockAfter > 0 },
     });
 
-    // Registrar el movimiento
     return tx.productMovement.create({
-      data: {
-        productId,
-        type,
-        quantity,
-        stockBefore,
-        stockAfter,
-      },
+      data:   { productId, type, quantity, stockBefore, stockAfter },
       select: movementSelect,
     });
   });
@@ -81,10 +74,7 @@ export async function createMovement(
 
 // ── Listar movimientos ────────────────────────────────────────────────
 
-export async function getMovements(filters: {
-  type?:  MovementType;
-  limit?: number;
-}) {
+export async function getMovements(filters: { type?: MovementType; limit?: number }) {
   return prisma.productMovement.findMany({
     where:   filters.type ? { type: filters.type } : undefined,
     orderBy: { createdAt: 'desc' },

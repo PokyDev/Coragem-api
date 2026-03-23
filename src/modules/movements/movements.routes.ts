@@ -1,31 +1,36 @@
+/**
+ * src/modules/movements/movements.routes.ts
+ *
+ * GET  /api/admin/movements                          — listar movimientos
+ * GET  /api/admin/movements/:id                      — movimiento por ID
+ * POST /api/admin/products/:productId/movements      — registrar movimiento
+ */
+
 import type { FastifyInstance } from 'fastify';
 import {
   postMovementHandler,
   getMovementsHandler,
   getMovementByIdHandler,
-} from '../controllers/movement.controller';
+} from './movements.controller';
 import {
   createMovementSchema,
   getMovementsSchema,
   getMovementByIdSchema,
-} from '../schemas/movement.schema';
+} from './movements.schema';
 
 export async function movementRoutes(app: FastifyInstance): Promise<void> {
-  // GET /api/admin/movements — todos los movimientos
-  app.get('/', {
+  app.get('/movements', {
     schema:     getMovementsSchema,
     preHandler: [app.authenticate],
     handler:    getMovementsHandler,
   });
 
-  // GET /api/admin/movements/:id — movimiento individual
-  app.get('/:id', {
+  app.get('/movements/:id', {
     schema:     getMovementByIdSchema,
     preHandler: [app.authenticate],
     handler:    getMovementByIdHandler,
   });
 
-  // POST /api/admin/products/:productId/movements — crear movimiento
   app.post('/products/:productId/movements', {
     schema:     createMovementSchema,
     preHandler: [app.authenticate],
