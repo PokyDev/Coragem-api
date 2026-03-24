@@ -16,6 +16,7 @@ export interface CloudinaryAsset {
 export interface RenameResult {
   publicId:  string;
   secureUrl: string;
+  displayName: string;
 }
 
 const ASSET_FOLDER = 'coragem/products';
@@ -39,28 +40,27 @@ export async function listAssets(): Promise<CloudinaryAsset[]> {
 }
 
 /**
- * Renombra un asset en Cloudinary.
+ * Actualizar display_name de un asset en Cloudinary.
+ * 
+ * Se evita usar 'uploader.rename' porque 'rename' modifica fisicamente el recurso
+ * (cambia el public_id y la URL), 'display_name' solo modifica
+ * el nombre visual en el panel, dejando el public_id y la URL sin cambios
  */
 export async function renameAsset(
-  fromPublicId: string,
-  newName:      string,
+  publicId: string,
+  newName:  string,
 ): Promise<RenameResult> {
-  const sanitized  = sanitizeName(newName);
+  const displayName = newName.trim();
 
-  // Si el public_id original no tiene carpeta, el destino tampoco la lleva
-  const folder     = fromPublicId.includes('/')
-    ? fromPublicId.substring(0, fromPublicId.lastIndexOf('/') + 1)
-    : '';
-
-  const toPublicId = folder ? `${folder}${sanitized}` : sanitized;
-
-  const result = await cloudinary.uploader.rename(fromPublicId, toPublicId, {
-    overwrite: false,
+  const result = await cloudinary.uploader.explicit(publicId, {
+    type: 'upload',
+    display_name: displayName,
   });
 
   return {
-    publicId:  result.public_id,
+    publicId: result.public_id,
     secureUrl: buildDeliveryUrl(result.secure_url),
+    displayName,
   };
 }
 
@@ -100,13 +100,4 @@ function mapResource(r: Record<string, unknown>): CloudinaryAsset {
     folder,
     displayName,
   };
-}
-
-/** Normaliza el nombre: trim, espacios a guiones, solo caracteres seguros. */
-function sanitizeName(name: string): string {
-  return name
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9_\-]/g, '');
 }

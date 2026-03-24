@@ -3,10 +3,7 @@
  */
 
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import {
-  listAssets,
-  renameAsset,
-} from './cloudinary.service';
+import { listAssets, renameAsset } from './cloudinary.service';
 
 interface RenameParams { publicId: string }
 interface RenameBody   { newName:  string }
