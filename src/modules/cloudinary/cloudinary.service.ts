@@ -37,10 +37,13 @@ const FOLDER = 'coragem/products';
 export async function listAssets(): Promise<CloudinaryAsset[]> {
   const result = await cloudinary.api.resources({
     type:        'upload',
-    prefix:      FOLDER,
+    prefix:      'coragem/products',
     max_results: 500,
     resource_type: 'image',
   });
+
+  // Log temporal
+  console.log('Cloudinary raw result:', JSON.stringify(result, null, 2));
 
   return (result.resources ?? []).map(mapResource);
 }
