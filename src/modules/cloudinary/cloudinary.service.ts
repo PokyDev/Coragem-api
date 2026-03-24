@@ -37,7 +37,6 @@ const FOLDER = 'coragem/products';
 export async function listAssets(): Promise<CloudinaryAsset[]> {
   const result = await cloudinary.api.resources({
     type:        'upload',
-    prefix:      'coragem/products',
     max_results: 500,
     resource_type: 'image',
   });
