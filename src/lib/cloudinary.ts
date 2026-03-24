@@ -39,7 +39,7 @@ export async function uploadImageBuffer(
       transformation: [
         { fetch_format: 'auto', quality: 'auto:good' },
       ],
-      ...(publicId && { public_id: publicId, overwrite: true }),
+      ...(publicId && { public_id: publicId, use_filename: false, unique_filename: false }),
     };
 
     const stream = cloudinary.uploader.upload_stream(options, (error, result) => {

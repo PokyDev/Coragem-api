@@ -126,7 +126,8 @@ async function uploadLocalImage(
 ): Promise<{ url: string; publicId: string; width: number; height: number }> {
   const filePath = path.join(IMAGES_DIR, filename);
   const buffer   = fs.readFileSync(filePath);
-  const publicId = path.parse(filename).name;
+  const name     = path.parse(filename).name; // "producto_1"
+  const publicId = `${CLOUDINARY_FOLDER}/${name}`; // "coragem/products/producto_1"
 
   return uploadImageBuffer(buffer, CLOUDINARY_FOLDER, publicId);
 }
