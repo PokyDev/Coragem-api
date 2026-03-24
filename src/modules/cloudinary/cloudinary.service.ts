@@ -8,7 +8,7 @@
  * La carpeta base es configurable — por defecto "coragem/products".
  */
 
-import { v2 as cloudinary } from 'cloudinary';
+import cloudinary from '../../lib/cloudinary';
 
 export interface CloudinaryAsset {
   publicId:   string;
