@@ -133,7 +133,6 @@ export async function moveAssets(
 
       const renamed = await cloudinary.uploader.rename(publicId, newPublicId, {
         overwrite: true,
-        resource_type: 'auto',
       });
 
       return mapResource(renamed as unknown as Record<string, unknown>);
