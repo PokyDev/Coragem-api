@@ -1,15 +1,40 @@
 /**
  * src/modules/cloudinary/cloudinary.routes.ts
  *
- * GET   /api/admin/cloudinary/images
+ * GET   /api/admin/cloudinary/folders?path=
+ * GET   /api/admin/cloudinary/images?folder=
  * PATCH /api/admin/cloudinary/images/:publicId/rename
  *
- * Ambas rutas requieren JWT (preHandler: authenticate).
- * El publicId viaja URL-encoded en el path param.
+ * Todas las rutas requieren JWT (preHandler: authenticate).
  */
 
 import type { FastifyInstance } from 'fastify';
-import { getAssetsHandler, patchRenameHandler } from './cloudinary.controller';
+import {
+  getFoldersHandler,
+  getAssetsHandler,
+  patchRenameHandler,
+} from './cloudinary.controller';
+
+const foldersSchema = {
+  querystring: {
+    type: 'object',
+    properties: {
+      path: { type: 'string' },
+    },
+    additionalProperties: false,
+  },
+};
+
+const assetsSchema = {
+  querystring: {
+    type: 'object',
+    required: ['folder'],
+    properties: {
+      folder: { type: 'string' },
+    },
+    additionalProperties: false,
+  },
+};
 
 const renameSchema = {
   params: {
@@ -30,7 +55,14 @@ const renameSchema = {
 };
 
 export async function cloudinaryRoutes(app: FastifyInstance): Promise<void> {
+  app.get('/folders', {
+    schema:     foldersSchema,
+    preHandler: [app.authenticate],
+    handler:    getFoldersHandler,
+  });
+
   app.get('/images', {
+    schema:     assetsSchema,
     preHandler: [app.authenticate],
     handler:    getAssetsHandler,
   });
