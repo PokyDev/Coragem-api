@@ -24,14 +24,13 @@ export interface RenameResult {
   displayName: string;
 }
 
+export interface MoveResult {
+  moved:  number;
+  assets: CloudinaryAsset[];
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────
 
-/**
- * Inserta f_auto,q_auto en la URL de entrega de Cloudinary.
- * Permite que el navegador reciba el formato más compatible
- * (WebP, AVIF, JPEG) aunque el asset original sea HEIC u otro
- * formato no soportado nativamente por los browsers.
- */
 function buildDeliveryUrl(secureUrl: string): string {
   return secureUrl.replace('/upload/', '/upload/f_auto,q_auto/');
 }
@@ -63,15 +62,6 @@ function mapResource(r: Record<string, unknown>): CloudinaryAsset {
 
 // ── Exports ───────────────────────────────────────────────────────────
 
-/**
- * Lista las sub-carpetas inmediatas de un path dado.
- *
- * - path vacío o ausente → carpetas raíz de Cloudinary
- * - path = "coragem"     → sub-carpetas de coragem (ej. products, banners…)
- *
- * Cloudinary devuelve las carpetas hijas en `result.folders`,
- * cada una con { name, path }.
- */
 export async function listFolders(path?: string): Promise<CloudinaryFolder[]> {
   const result = path
     ? await cloudinary.api.sub_folders(path)
@@ -83,16 +73,6 @@ export async function listFolders(path?: string): Promise<CloudinaryFolder[]> {
   }));
 }
 
-/**
- * Lista todos los assets de una carpeta específica de Cloudinary.
- *
- * Usa asset_folder en lugar de prefix porque los assets subidos
- * manualmente desde el panel de Cloudinary no incluyen la carpeta
- * en el public_id — la carpeta solo existe en el campo asset_folder.
- *
- * @param folder - Path completo de la carpeta (ej. "coragem/products").
- *                 Si está vacío, lista assets sin carpeta asignada.
- */
 export async function listAssets(folder: string): Promise<CloudinaryAsset[]> {
   const result = await cloudinary.api.resources({
     type:          'upload',
@@ -109,13 +89,6 @@ export async function listAssets(folder: string): Promise<CloudinaryAsset[]> {
     .map(mapResource);
 }
 
-/**
- * Actualiza el display_name de un asset en Cloudinary.
- *
- * Se evita 'uploader.rename' porque modifica físicamente el public_id y la URL.
- * 'display_name' solo cambia el nombre visual en el panel, sin afectar
- * el public_id ni la URL de entrega.
- */
 export async function renameAsset(
   publicId: string,
   newName:  string,
@@ -132,4 +105,58 @@ export async function renameAsset(
     secureUrl:   buildDeliveryUrl(result.secure_url),
     displayName,
   };
+}
+
+/**
+ * Mueve uno o varios assets a una carpeta destino en Cloudinary.
+ *
+ * Estrategia: cloudinary.uploader.rename cambia el public_id del asset,
+ * lo que efectivamente lo mueve a la nueva carpeta. El display_name se
+ * preserva usando uploader.explicit tras el rename.
+ *
+ * @param publicIds    - Lista de public_ids a mover
+ * @param targetFolder - Carpeta destino (ej. "coragem/banners")
+ */
+export async function moveAssets(
+  publicIds:    string[],
+  targetFolder: string,
+): Promise<MoveResult> {
+  const results = await Promise.allSettled(
+    publicIds.map(async (publicId) => {
+      // El nombre del archivo es la última parte del public_id
+      const filename = publicId.includes('/')
+        ? publicId.substring(publicId.lastIndexOf('/') + 1)
+        : publicId;
+
+      const newPublicId = targetFolder
+        ? `${targetFolder}/${filename}`
+        : filename;
+
+      // Mover el asset cambiando su public_id
+      const renamed = await cloudinary.uploader.rename(publicId, newPublicId, {
+        overwrite:     false,
+        resource_type: 'image',
+      });
+
+      return mapResource(renamed as unknown as Record<string, unknown>);
+    }),
+  );
+
+  const moved: CloudinaryAsset[] = [];
+  const errors: string[] = [];
+
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      moved.push(result.value);
+    } else {
+      const err = result.reason as Error;
+      errors.push(err.message ?? 'Error desconocido');
+    }
+  }
+
+  if (errors.length > 0 && moved.length === 0) {
+    throw new Error(`No se pudo mover ningún asset: ${errors[0]}`);
+  }
+
+  return { moved: moved.length, assets: moved };
 }
