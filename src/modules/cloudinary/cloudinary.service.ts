@@ -101,7 +101,12 @@ export async function listAssets(folder: string): Promise<CloudinaryAsset[]> {
     max_results:   500,
   });
 
-  return (result.resources ?? []).map(mapResource);
+  return (result.resources ?? [])
+    .filter((r: Record<string, unknown>) => {
+      const assetFolder = (r.asset_folder as string) ?? (r.folder as string) ?? '';
+      return assetFolder === folder;
+    })
+    .map(mapResource);
 }
 
 /**
