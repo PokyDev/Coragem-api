@@ -123,7 +123,6 @@ export async function moveAssets(
 ): Promise<MoveResult> {
   const results = await Promise.allSettled(
     publicIds.map(async (publicId) => {
-      // El nombre del archivo es la última parte del public_id
       const filename = publicId.includes('/')
         ? publicId.substring(publicId.lastIndexOf('/') + 1)
         : publicId;
@@ -132,10 +131,9 @@ export async function moveAssets(
         ? `${targetFolder}/${filename}`
         : filename;
 
-      // Mover el asset cambiando su public_id
       const renamed = await cloudinary.uploader.rename(publicId, newPublicId, {
-        overwrite:     false,
-        resource_type: 'image',
+        overwrite: true,
+        resource_type: 'auto',
       });
 
       return mapResource(renamed as unknown as Record<string, unknown>);
@@ -149,13 +147,12 @@ export async function moveAssets(
     if (result.status === 'fulfilled') {
       moved.push(result.value);
     } else {
-      const err = result.reason as Error;
-      errors.push(err.message ?? 'Error desconocido');
+      errors.push((result.reason as Error).message);
     }
   }
 
-  if (errors.length > 0 && moved.length === 0) {
-    throw new Error(`No se pudo mover ningún asset: ${errors[0]}`);
+  if (moved.length === 0) {
+    throw new Error(errors[0] || 'No se movió ningún asset');
   }
 
   return { moved: moved.length, assets: moved };
