@@ -81,8 +81,6 @@ export async function listAssets(folder: string): Promise<CloudinaryAsset[]> {
     max_results:   500,
   });
 
-  console.log("RAW RESOURCES:", JSON.stringify(result.resources, null, 2));
-
   return (result.resources ?? [])
     .filter((r: Record<string, unknown>) => {
       const assetFolder = (r.asset_folder as string) ?? (r.folder as string) ?? '';
@@ -112,12 +110,19 @@ export async function renameAsset(
 /**
  * Mueve uno o varios assets a una carpeta destino en Cloudinary.
  *
- * Estrategia: cloudinary.uploader.rename cambia el public_id del asset,
- * lo que efectivamente lo mueve a la nueva carpeta. El display_name se
- * preserva usando uploader.explicit tras el rename.
+ * Estrategia: usa `uploader.explicit` con `asset_folder` para cambiar
+ * la carpeta lógica del asset sin modificar su public_id ni su URL.
+ *
+ * Por qué NO usar `uploader.rename`:
+ *   En esta cuenta, `asset_folder` y el prefijo del `public_id` son
+ *   campos independientes. `rename` modifica el `public_id` (URL física)
+ *   pero no actualiza `asset_folder`, y además falla cuando el filename
+ *   resultante ya existe en el destino. `explicit` con `asset_folder`
+ *   es la API correcta para mover assets entre carpetas lógicas.
  *
  * @param publicIds    - Lista de public_ids a mover
- * @param targetFolder - Carpeta destino (ej. "coragem/banners")
+ * @param targetFolder - Carpeta destino (ej. "coragem/banners").
+ *                       Cadena vacía = carpeta raíz.
  */
 export async function moveAssets(
   publicIds:    string[],
@@ -125,19 +130,12 @@ export async function moveAssets(
 ): Promise<MoveResult> {
   const results = await Promise.allSettled(
     publicIds.map(async (publicId) => {
-      const filename = publicId.includes('/')
-        ? publicId.substring(publicId.lastIndexOf('/') + 1)
-        : publicId;
-
-      const newPublicId = targetFolder
-        ? `${targetFolder}/${filename}`
-        : filename;
-
-      const renamed = await cloudinary.uploader.rename(publicId, newPublicId, {
-        overwrite: true,
+      const result = await cloudinary.uploader.explicit(publicId, {
+        type:         'upload',
+        asset_folder: targetFolder,
       });
 
-      return mapResource(renamed as unknown as Record<string, unknown>);
+      return mapResource(result as unknown as Record<string, unknown>);
     }),
   );
 
@@ -148,7 +146,7 @@ export async function moveAssets(
     if (result.status === 'fulfilled') {
       moved.push(result.value);
     } else {
-      errors.push((result.reason as Error).message);
+      errors.push((result.reason as Error).message ?? 'Error desconocido');
     }
   }
 
