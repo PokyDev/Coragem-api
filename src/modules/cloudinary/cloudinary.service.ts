@@ -81,6 +81,8 @@ export async function listAssets(folder: string): Promise<CloudinaryAsset[]> {
     max_results:   500,
   });
 
+  console.log("RAW RESOURCES:", JSON.stringify(result.resources, null, 2));
+
   return (result.resources ?? [])
     .filter((r: Record<string, unknown>) => {
       const assetFolder = (r.asset_folder as string) ?? (r.folder as string) ?? '';
