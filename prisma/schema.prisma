@@ -93,3 +93,5 @@ model AppConfig {
   value     String
   updatedAt DateTime @updatedAt
 }
+
+// Rollback a schema sin sync-drive
