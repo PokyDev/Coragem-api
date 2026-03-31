@@ -94,4 +94,4 @@ model AppConfig {
   updatedAt DateTime @updatedAt
 }
 
-// Rollback a schema sin sync-drive
+// Rollback a schema sin modulo sync-drive
