@@ -64,7 +64,7 @@ export async function createMovement(
       where: { id: productId },
       data:  {
         stock: stockAfter,
-        isVisibile: stockAfter > 0,
+        isVisible: stockAfter > 0,
         ...(type === 'SALE' && { ventas: { increment: quantity } }),
       },
     });
