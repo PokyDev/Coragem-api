@@ -62,7 +62,11 @@ export async function createMovement(
 
     await tx.product.update({
       where: { id: productId },
-      data:  { stock: stockAfter, isVisible: stockAfter > 0 },
+      data:  {
+        stock: stockAfter,
+        isVisibile: stockAfter > 0,
+        ...(type === 'SALE' && { ventas: { increment: quantity } }),
+      },
     });
 
     return tx.productMovement.create({
