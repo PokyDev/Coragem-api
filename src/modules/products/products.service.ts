@@ -11,6 +11,7 @@
 
 import type { Category, Color, Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
+import { config } from '../../lib/config';
 import {
   VALID_CATEGORIES,
   VALID_COLORS,
@@ -108,7 +109,8 @@ export async function getVisibleProducts(filters: GetProductsFilter) {
 
   return prisma.product.findMany({
     where: {
-      isVisible: true,
+      // Si showAllProducts = false, filtrar solo los visibles
+      ...(config.catalog.showAllProducts ? {} : { isVisible: true }),
       ...(category && { category }),
       ...(color    && { color    }),
       ...(search   && { name: { contains: search, mode: 'insensitive' } }),

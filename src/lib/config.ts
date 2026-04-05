@@ -57,4 +57,11 @@ export const config = {
     adminAllowedEmails: requireEmailList('ADMIN_ALLOWED_EMAILS'),
     frontendUrl:       requireEnv('FRONTEND_URL'),
   },
+
+  // Config Const
+  catalog: {
+    // true -> Endpoint Publico (devuelve todos los productos)
+    // false -> Producción (solo productos con isVisible = true)
+    showAllProducts: true,
+  },
 } as const;
