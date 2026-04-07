@@ -24,12 +24,12 @@ import type { CreateProductBody, PatchProductBody } from './products.schema';
 // ── Tipos de request ──────────────────────────────────────────────────
 
 interface GetProductsQuery {
-  category?: Category;
-  color?:    Color;
-  search?:   string;
-  sort?:     SortKey;
-  priceMin?: number;
-  priceMax?: number;
+  categorySlug?: string;
+  colorSlug?:    string;
+  search?:       string;
+  sort?:         SortKey;
+  priceMin?:     number;
+  priceMax?:     number;
 }
 
 interface ProductIdParams {

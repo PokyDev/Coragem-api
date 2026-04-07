@@ -1,35 +1,23 @@
 /**
  * src/modules/products/products.service.ts
- *
- * Lógica de negocio para el módulo de productos.
- * Unifica las responsabilidades que antes estaban repartidas entre
- * product.service.ts y admin-product.service.ts.
- *
- * El backend ya no gestiona imágenes: la URL y el publicId llegan
- * del cliente, que interactúa directamente con Cloudinary.
  */
 
-import type { Category, Color, Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { config } from '../../lib/config';
-import {
-  VALID_CATEGORIES,
-  VALID_COLORS,
-  type CreateProductBody,
-  type PatchProductBody,
-} from './products.schema';
+import type { CreateProductBody, PatchProductBody } from './products.schema';
 
 // ── Tipos públicos ────────────────────────────────────────────────────
 
 export type SortKey = 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc' | 'most_sold';
 
 export interface GetProductsFilter {
-  category?: Category;
-  color?:    Color;
-  search?:   string;
-  sort?:     SortKey;
-  priceMin?: number;
-  priceMax?: number;
+  categorySlug?: string;
+  colorSlug?:    string;
+  search?:       string;
+  sort?:         SortKey;
+  priceMin?:     number;
+  priceMax?:     number;
 }
 
 // ── Errores tipados ───────────────────────────────────────────────────
@@ -58,38 +46,35 @@ const imageSelect = {
   height: true,
 } as const;
 
+const categorySelect = {
+  id:   true,
+  name: true,
+  slug: true,
+} as const;
+
+const colorSelect = {
+  id:   true,
+  name: true,
+  slug: true,
+  hex:  true,
+} as const;
+
 const adminProductSelect = {
   id:        true,
   name:      true,
   price:     true,
-  category:  true,
-  color:     true,
   stock:     true,
   ventas:    true,
   isVisible: true,
+  category:  { select: categorySelect },
+  color:     { select: colorSelect    },
   images: {
     orderBy: { order: 'asc' as const },
     select:  imageSelect,
   },
 } as const;
 
-// ── Helpers de validación ─────────────────────────────────────────────
-
-function validateCategory(raw: string): Category {
-  if (!(VALID_CATEGORIES as readonly string[]).includes(raw)) {
-    throw new ProductValidationError(`Categoría inválida: ${raw}`);
-  }
-  return raw as Category;
-}
-
-function validateColor(raw: string): Color {
-  if (!(VALID_COLORS as readonly string[]).includes(raw)) {
-    throw new ProductValidationError(`Color inválido: ${raw}`);
-  }
-  return raw as Color;
-}
-
-// ── Helpers de ordenamiento ───────────────────────────────────────────
+// ── Helper de ordenamiento ────────────────────────────────────────────
 
 function buildOrderBy(sort?: SortKey): Prisma.ProductOrderByWithRelationInput {
   switch (sort) {
@@ -105,15 +90,14 @@ function buildOrderBy(sort?: SortKey): Prisma.ProductOrderByWithRelationInput {
 // ── Lectura pública ───────────────────────────────────────────────────
 
 export async function getVisibleProducts(filters: GetProductsFilter) {
-  const { category, color, search, sort, priceMin, priceMax } = filters;
+  const { categorySlug, colorSlug, search, sort, priceMin, priceMax } = filters;
 
   return prisma.product.findMany({
     where: {
-      // Si showAllProducts = false, filtrar solo los visibles
       ...(config.catalog.showAllProducts ? {} : { isVisible: true }),
-      ...(category && { category }),
-      ...(color    && { color    }),
-      ...(search   && { name: { contains: search, mode: 'insensitive' } }),
+      ...(categorySlug && { category: { slug: categorySlug } }),
+      ...(colorSlug    && { color:    { slug: colorSlug    } }),
+      ...(search       && { name: { contains: search, mode: 'insensitive' } }),
       ...((priceMin !== undefined || priceMax !== undefined) && {
         price: {
           ...(priceMin !== undefined && { gte: priceMin }),
@@ -126,10 +110,10 @@ export async function getVisibleProducts(filters: GetProductsFilter) {
       id:       true,
       name:     true,
       price:    true,
-      category: true,
-      color:    true,
       stock:    true,
       ventas:   true,
+      category: { select: categorySelect },
+      color:    { select: colorSelect    },
       images: {
         orderBy: { order: 'asc' },
         select:  imageSelect,
@@ -145,11 +129,11 @@ export async function getVisibleProductById(id: string) {
       id:        true,
       name:      true,
       price:     true,
-      category:  true,
-      color:     true,
       stock:     true,
       ventas:    true,
       createdAt: true,
+      category:  { select: categorySelect },
+      color:     { select: colorSelect    },
       images: {
         orderBy: { order: 'asc' },
         select:  imageSelect,
@@ -169,10 +153,6 @@ export async function getAllProducts() {
 
 // ── Escritura admin ───────────────────────────────────────────────────
 
-/**
- * Crea un producto con su imagen inicial.
- * La URL e imagePublicId ya fueron obtenidos por el cliente desde Cloudinary.
- */
 export async function createProduct(body: CreateProductBody) {
   const stock     = body.stock;
   const isVisible = stock > 0;
@@ -183,9 +163,9 @@ export async function createProduct(body: CreateProductBody) {
       price:     body.price,
       stock,
       ventas:    body.ventas ?? 0,
-      category:  validateCategory(body.category),
-      color:     validateColor(body.color),
       isVisible,
+      category:  { connect: { id: body.categoryId } },
+      color:     { connect: { id: body.colorId    } },
       images: {
         create: {
           url:      body.imageUrl,
@@ -198,11 +178,6 @@ export async function createProduct(body: CreateProductBody) {
   });
 }
 
-/**
- * Actualiza parcialmente un producto.
- * Si llega una nueva imageUrl + imagePublicId, actualiza el registro Image.
- * isVisible se recalcula automáticamente cuando cambia el stock.
- */
 export async function patchProduct(productId: string, body: PatchProductBody) {
   const existing = await prisma.product.findUnique({
     where:  { id: productId },
@@ -222,14 +197,13 @@ export async function patchProduct(productId: string, body: PatchProductBody) {
 
   const hasImageUpdate = Boolean(body.imageUrl && body.imagePublicId);
 
-  // Construir el objeto de actualización para Product
   const productData: Prisma.ProductUpdateInput = {};
-  if (body.name     !== undefined) productData.name     = body.name.trim();
-  if (body.price    !== undefined) productData.price    = body.price;
-  if (body.ventas   !== undefined) productData.ventas   = body.ventas;
-  if (body.category !== undefined) productData.category = validateCategory(body.category);
-  if (body.color    !== undefined) productData.color    = validateColor(body.color);
-  if (body.stock    !== undefined) {
+  if (body.name       !== undefined) productData.name      = body.name.trim();
+  if (body.price      !== undefined) productData.price     = body.price;
+  if (body.ventas     !== undefined) productData.ventas    = body.ventas;
+  if (body.categoryId !== undefined) productData.category  = { connect: { id: body.categoryId } };
+  if (body.colorId    !== undefined) productData.color     = { connect: { id: body.colorId    } };
+  if (body.stock      !== undefined) {
     productData.stock     = body.stock;
     productData.isVisible = body.stock > 0;
   }
@@ -272,11 +246,6 @@ export async function patchProduct(productId: string, body: PatchProductBody) {
   });
 }
 
-/**
- * Elimina un producto. El cliente es responsable de limpiar
- * los assets en Cloudinary usando el publicId de las imágenes
- * retornadas antes de llamar a este endpoint.
- */
 export async function deleteProduct(productId: string): Promise<void> {
   const existing = await prisma.product.findUnique({
     where:  { id: productId },
@@ -287,6 +256,5 @@ export async function deleteProduct(productId: string): Promise<void> {
     throw new ProductNotFoundError('Producto no encontrado');
   }
 
-  // CASCADE en la BD elimina los registros Image automáticamente
   await prisma.product.delete({ where: { id: productId } });
 }

@@ -14,6 +14,7 @@ import { cookiePlugin      } from './plugins/cookie';
 import { googleOAuthPlugin } from './plugins/oauth';
 
 import { productRoutes  } from './modules/products/products.routes';
+import { catalogRoutes } from './modules/catalog/catalog.routes';
 import { movementRoutes } from './modules/movements/movements.routes';
 import { cloudinaryRoutes } from './modules/cloudinary/cloudinary.routes';
 import { authRoutes     } from './routes/auth.routes';
@@ -49,6 +50,7 @@ export async function buildApp() {
   await app.register(authRoutes,    { prefix: '/api/auth'    });
   await app.register(patternRoutes, { prefix: '/api/pattern' });
   await app.register(productRoutes, { prefix: '/api'         });
+  await app.register(catalogRoutes, { prefix: '/api'         });
   await app.register(movementRoutes,{ prefix: '/api/admin'   });
   await app.register(cloudinaryRoutes, { prefix: '/api/admin/cloudinary' });
 
