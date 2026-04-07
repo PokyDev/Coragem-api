@@ -49,7 +49,7 @@ function toSlug(name: string): string {
 // ── Categorías ────────────────────────────────────────────────────────
 
 export async function listCategories() {
-  return prisma.productCategory.findMany({
+  return prisma.category.findMany({
     orderBy: { name: 'asc' },
     select: {
       id:   true,
@@ -63,7 +63,7 @@ export async function listCategories() {
 export async function createCategory(name: string) {
   const slug = toSlug(name);
 
-  const existing = await prisma.productCategory.findUnique({
+  const existing = await prisma.category.findUnique({
     where:  { slug },
     select: { id: true },
   });
@@ -72,14 +72,14 @@ export async function createCategory(name: string) {
     throw new CatalogConflictError(`Ya existe una categoría con el nombre "${name}"`);
   }
 
-  return prisma.productCategory.create({
+  return prisma.category.create({
     data:   { name: name.trim(), slug },
     select: { id: true, name: true, slug: true },
   });
 }
 
 export async function updateCategory(id: string, name: string) {
-  const existing = await prisma.productCategory.findUnique({
+  const existing = await prisma.category.findUnique({
     where:  { id },
     select: { id: true },
   });
@@ -91,7 +91,7 @@ export async function updateCategory(id: string, name: string) {
   const slug = toSlug(name);
 
   // Verificar que el nuevo slug no colisione con otra categoría
-  const conflict = await prisma.productCategory.findFirst({
+  const conflict = await prisma.category.findFirst({
     where:  { slug, NOT: { id } },
     select: { id: true },
   });
@@ -100,7 +100,7 @@ export async function updateCategory(id: string, name: string) {
     throw new CatalogConflictError(`Ya existe una categoría con el nombre "${name}"`);
   }
 
-  return prisma.productCategory.update({
+  return prisma.category.update({
     where:  { id },
     data:   { name: name.trim(), slug },
     select: { id: true, name: true, slug: true },
@@ -108,7 +108,7 @@ export async function updateCategory(id: string, name: string) {
 }
 
 export async function deleteCategory(id: string) {
-  const existing = await prisma.productCategory.findUnique({
+  const existing = await prisma.category.findUnique({
     where:  { id },
     select: {
       id: true,
@@ -126,13 +126,13 @@ export async function deleteCategory(id: string) {
     );
   }
 
-  await prisma.productCategory.delete({ where: { id } });
+  await prisma.category.delete({ where: { id } });
 }
 
 // ── Colores ───────────────────────────────────────────────────────────
 
 export async function listColors() {
-  return prisma.productColor.findMany({
+  return prisma.color.findMany({
     orderBy: { name: 'asc' },
     select: {
       id:   true,
@@ -147,7 +147,7 @@ export async function listColors() {
 export async function createColor(name: string, hex: string) {
   const slug = toSlug(name);
 
-  const existing = await prisma.productColor.findUnique({
+  const existing = await prisma.color.findUnique({
     where:  { slug },
     select: { id: true },
   });
@@ -156,14 +156,14 @@ export async function createColor(name: string, hex: string) {
     throw new CatalogConflictError(`Ya existe un color con el nombre "${name}"`);
   }
 
-  return prisma.productColor.create({
+  return prisma.color.create({
     data:   { name: name.trim(), slug, hex: hex.toUpperCase() },
     select: { id: true, name: true, slug: true, hex: true },
   });
 }
 
 export async function updateColor(id: string, name: string, hex: string) {
-  const existing = await prisma.productColor.findUnique({
+  const existing = await prisma.color.findUnique({
     where:  { id },
     select: { id: true },
   });
@@ -174,7 +174,7 @@ export async function updateColor(id: string, name: string, hex: string) {
 
   const slug = toSlug(name);
 
-  const conflict = await prisma.productColor.findFirst({
+  const conflict = await prisma.color.findFirst({
     where:  { slug, NOT: { id } },
     select: { id: true },
   });
@@ -183,7 +183,7 @@ export async function updateColor(id: string, name: string, hex: string) {
     throw new CatalogConflictError(`Ya existe un color con el nombre "${name}"`);
   }
 
-  return prisma.productColor.update({
+  return prisma.color.update({
     where:  { id },
     data:   { name: name.trim(), slug, hex: hex.toUpperCase() },
     select: { id: true, name: true, slug: true, hex: true },
@@ -191,7 +191,7 @@ export async function updateColor(id: string, name: string, hex: string) {
 }
 
 export async function deleteColor(id: string) {
-  const existing = await prisma.productColor.findUnique({
+  const existing = await prisma.color.findUnique({
     where:  { id },
     select: {
       id: true,
@@ -209,5 +209,5 @@ export async function deleteColor(id: string) {
     );
   }
 
-  await prisma.productColor.delete({ where: { id } });
+  await prisma.color.delete({ where: { id } });
 }
