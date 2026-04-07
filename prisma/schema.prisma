@@ -7,39 +7,47 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ── Enums ─────────────────────────────────────────
-
-enum Category {
-  EARCUFF
-  ANILLO
-  DIJE
-  CADENA
-  TOPOS
-  CANDONGAS
-  CONJUNTOS
-}
-
-enum Color {
-  ROJO
-  NEGRO
-  BLANCO
-  ROSADO
-  SILVER
-}
-
 enum MovementType {
   PURCHASE // Entrada de stock
   SALE     // Salida de stock
 }
 
-// ── Modelos ───────────────────────────────────────
+
+// ── Modelos de catálogo dinámico ──────────────────
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([slug])
+}
+
+model Color {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  hex       String
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([slug])
+}
+
+// ── Modelos Generales ───────────────────────────────────────
 
 model Product {
   id          String    @id @default(cuid())
   name        String
   price       Int
-  category    Category
-  color       Color
+  categoryId  String
+  category    Category  @relation(fields: [categoryId], references: [id])
+  colorId     String
+  color       Color     @relation(fields: [colorId], references: [id])
   stock       Int       @default(0)
   ventas      Int       @default(0)
   isVisible   Boolean   @default(true)
@@ -48,8 +56,8 @@ model Product {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  @@index([category])
-  @@index([color])
+  @@index([categoryId])
+  @@index([colorId])
   @@index([isVisible])
 }
 
@@ -93,5 +101,3 @@ model AppConfig {
   value     String
   updatedAt DateTime @updatedAt
 }
-
-// Rollback a schema sin modulo sync-drive
