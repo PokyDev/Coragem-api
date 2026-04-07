@@ -211,3 +211,5 @@ export async function deleteColor(id: string) {
 
   await prisma.color.delete({ where: { id } });
 }
+
+// test
