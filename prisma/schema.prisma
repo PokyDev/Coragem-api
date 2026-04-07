@@ -24,6 +24,7 @@ model Category {
   updatedAt DateTime  @updatedAt
 
   @@index([slug])
+  @@map("ProductCategory")
 }
 
 model Color {
@@ -36,6 +37,7 @@ model Color {
   updatedAt DateTime  @updatedAt
 
   @@index([slug])
+  @@map("ProductColor")
 }
 
 // ── Modelos Generales ───────────────────────────────────────
