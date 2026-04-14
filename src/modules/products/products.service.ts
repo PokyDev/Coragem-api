@@ -144,6 +144,25 @@ export async function getVisibleProductById(id: string) {
 
 // ── Lectura admin ─────────────────────────────────────────────────────
 
+export async function getTopSellingProducts(limit = 5) {
+  return prisma.product.findMany({
+    take:    limit,
+    orderBy: { ventas: 'desc' },
+    select: {
+      id:     true,
+      name:   true,
+      price:  true,
+      stock:  true,
+      ventas: true,
+      images: {
+        orderBy: { order: 'asc' },
+        take:    1,
+        select:  imageSelect,
+      },
+    },
+  });
+}
+
 export async function getAllProducts() {
   return prisma.product.findMany({
     orderBy: { createdAt: 'desc' },

@@ -17,6 +17,7 @@ import {
   getProductsHandler,
   getProductByIdHandler,
   getAdminProductsHandler,
+  getTopProductsHandler,
   postProductHandler,
   patchProductHandler,
   deleteProductHandler,
@@ -43,6 +44,11 @@ export async function productRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // ── Admin ─────────────────────────────────────────────────────────
+
+  app.get('/admin/products/top', {
+    preHandler: [app.authenticate],
+    handler:    getTopProductsHandler,
+  });
 
   app.get('/admin/products', {
     preHandler: [app.authenticate],

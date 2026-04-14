@@ -12,6 +12,7 @@ import {
   getVisibleProducts,
   getVisibleProductById,
   getAllProducts,
+  getTopSellingProducts,
   createProduct,
   patchProduct,
   deleteProduct,
@@ -67,6 +68,14 @@ export async function getAdminProductsHandler(
   reply:    FastifyReply,
 ): Promise<void> {
   const products = await getAllProducts();
+  reply.send({ products });
+}
+
+export async function getTopProductsHandler(
+  _request: FastifyRequest,
+  reply:    FastifyReply,
+): Promise<void> {
+  const products = await getTopSellingProducts();
   reply.send({ products });
 }
 
