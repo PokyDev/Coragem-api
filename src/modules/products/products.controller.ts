@@ -31,6 +31,8 @@ interface GetProductsQuery {
   sort?:         SortKey;
   priceMin?:     number;
   priceMax?:     number;
+  limit?:        number;
+  offset?:       number;
 }
 
 interface ProductIdParams {
@@ -43,8 +45,8 @@ export async function getProductsHandler(
   request: FastifyRequest<{ Querystring: GetProductsQuery }>,
   reply:   FastifyReply,
 ): Promise<void> {
-  const products = await getVisibleProducts(request.query);
-  reply.send({ products });
+  const { products, total } = await getVisibleProducts(request.query);
+  reply.send({ products, total });
 }
 
 export async function getProductByIdHandler(

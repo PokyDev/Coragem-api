@@ -42,6 +42,8 @@ export const getProductsSchema: FastifySchema = {
       sort:         { type: 'string', enum: SORT_KEYS },
       priceMin:     { type: 'integer', minimum: 0 },
       priceMax:     { type: 'integer', minimum: 0 },
+      limit:        { type: 'integer', minimum: 1, maximum: 100 },
+      offset:       { type: 'integer', minimum: 0 },
     },
     additionalProperties: false,
   },

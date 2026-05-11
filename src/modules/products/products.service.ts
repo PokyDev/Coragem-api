@@ -18,6 +18,8 @@ export interface GetProductsFilter {
   sort?:         SortKey;
   priceMin?:     number;
   priceMax?:     number;
+  limit?:        number;
+  offset?:       number;
 }
 
 // ── Errores tipados ───────────────────────────────────────────────────
@@ -90,36 +92,47 @@ function buildOrderBy(sort?: SortKey): Prisma.ProductOrderByWithRelationInput {
 // ── Lectura pública ───────────────────────────────────────────────────
 
 export async function getVisibleProducts(filters: GetProductsFilter) {
-  const { categorySlug, colorSlug, search, sort, priceMin, priceMax } = filters;
+  const { categorySlug, colorSlug, search, sort, priceMin, priceMax, limit, offset } = filters;
 
-  return prisma.product.findMany({
-    where: {
-      ...(config.catalog.showAllProducts ? {} : { isVisible: true }),
-      ...(categorySlug && { category: { slug: categorySlug } }),
-      ...(colorSlug    && { color:    { slug: colorSlug    } }),
-      ...(search       && { name: { contains: search, mode: 'insensitive' } }),
-      ...((priceMin !== undefined || priceMax !== undefined) && {
-        price: {
-          ...(priceMin !== undefined && { gte: priceMin }),
-          ...(priceMax !== undefined && { lte: priceMax }),
-        },
-      }),
-    },
-    orderBy: buildOrderBy(sort),
-    select: {
-      id:       true,
-      name:     true,
-      price:    true,
-      stock:    true,
-      ventas:   true,
-      category: { select: categorySelect },
-      color:    { select: colorSelect    },
-      images: {
-        orderBy: { order: 'asc' },
-        select:  imageSelect,
+  const where: Prisma.ProductWhereInput = {
+    ...(config.catalog.showAllProducts ? {} : { isVisible: true }),
+    ...(categorySlug && { category: { slug: categorySlug } }),
+    ...(colorSlug    && { color:    { slug: colorSlug    } }),
+    ...(search       && { name: { contains: search, mode: 'insensitive' } }),
+    ...((priceMin !== undefined || priceMax !== undefined) && {
+      price: {
+        ...(priceMin !== undefined && { gte: priceMin }),
+        ...(priceMax !== undefined && { lte: priceMax }),
       },
+    }),
+  };
+
+  const productSelect = {
+    id:       true,
+    name:     true,
+    price:    true,
+    stock:    true,
+    ventas:   true,
+    category: { select: categorySelect },
+    color:    { select: colorSelect    },
+    images: {
+      orderBy: { order: 'asc' as const },
+      select:  imageSelect,
     },
-  });
+  };
+
+  const [products, total] = await prisma.$transaction([
+    prisma.product.findMany({
+      where,
+      orderBy: buildOrderBy(sort),
+      select:  productSelect,
+      ...(limit  !== undefined && { take: limit  }),
+      ...(offset !== undefined && { skip: offset }),
+    }),
+    prisma.product.count({ where }),
+  ]);
+
+  return { products, total };
 }
 
 export async function getVisibleProductById(id: string) {
